@@ -1,6 +1,5 @@
 --[[
-  Universal ESP + Team + Health + Tracers + Head Hitbox (5 teams)
-  Menu cố định bên trái, nút hình tròn hiện khi tắt menu, liên tục cập nhật khoảng cách
+  Universal ESP Menu (fixed left, round button for show/hide, no □)
   By Conghau — 2025-08-16
 ]]
 
@@ -23,7 +22,7 @@ local State = {
     tracerEnabled = false,
     hitboxEnabled = false,
     headHitboxSize = 5,
-    menuVisible = true
+    menuVisible = false  -- Mặc định chỉ hiện nút tròn, menu ẩn
 }
 
 local HasDrawing = pcall(function()
@@ -34,43 +33,6 @@ local ESPMap = {}
 local TeamIndexMap = {}
 
 --------------------------
--- UTILS
---------------------------
-local function formatNum(n)
-    n = math.floor(n or 0)
-    if n >= 1000 then
-        return string.format("%.1fk", n/1000)
-    end
-    return tostring(n)
-end
-
-local function getTeamKey(p)
-    if p.Team ~= nil then
-        return "T:" .. (p.Team.Name or "Unknown")
-    elseif p.TeamColor ~= nil then
-        return "C:" .. tostring(p.TeamColor)
-    else
-        return "N:" .. p.Name
-    end
-end
-
-local function getTeamColor(p)
-    local key = getTeamKey(p)
-    if not TeamIndexMap[key] then
-        local count = 0
-        for _ in pairs(TeamIndexMap) do count += 1 end
-        local idx = (count % 5) + 1
-        TeamIndexMap[key] = idx
-    end
-    return TEAM_COLORS[TeamIndexMap[key]] or TEAM_COLORS[1]
-end
-
-local function worldToScreen(v3)
-    local v, onScreen = Camera:WorldToViewportPoint(v3)
-    return Vector2.new(v.X, v.Y), onScreen, v.Z
-end
-
---------------------------
 -- UI
 --------------------------
 local gui = Instance.new("ScreenGui")
@@ -79,12 +41,31 @@ gui.ResetOnSpawn = false
 gui.IgnoreGuiInset = false
 gui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
+-- Nút hình tròn cố định bên trái trên cùng
+local openBtn = Instance.new("ImageButton")
+openBtn.Size = UDim2.new(0,48,0,48)
+openBtn.Position = UDim2.new(0, 32, 0, 18)
+openBtn.BackgroundTransparency = 1
+openBtn.Image = "rbxassetid://13762382490"
+openBtn.Parent = gui
+openBtn.Visible = true
+Instance.new("UICorner", openBtn).CornerRadius = UDim.new(1,0)
+
+-- Khi bấm vào nút tròn, hiện menu
+openBtn.MouseButton1Click:Connect(function()
+    frame.Visible = true
+    State.menuVisible = true
+    openBtn.Visible = false
+end)
+
+-- Menu ESP cố định bên trái, mặc định ẩn
 local frame = Instance.new("Frame")
 frame.Size = UDim2.fromOffset(240, 200)
 frame.Position = UDim2.new(0, 32, 0, 80)
 frame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
 frame.BorderSizePixel = 0
 frame.Active = true
+frame.Visible = false
 frame.Parent = gui
 Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 10)
 
@@ -186,7 +167,7 @@ note.TextColor3 = Color3.fromRGB(200,200,200)
 note.TextXAlignment = Enum.TextXAlignment.Left
 note.Parent = frame
 
--- Nút đóng menu (cố định)
+-- Nút tắt menu (✕)
 local closeBtn = Instance.new("TextButton")
 closeBtn.Size = UDim2.new(0,32,0,32)
 closeBtn.Position = UDim2.new(1,-42,0,8)
@@ -198,31 +179,49 @@ closeBtn.TextColor3 = Color3.new(1,1,1)
 closeBtn.Parent = frame
 Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(1,0)
 
--- Nút mở lại menu hình tròn bên trái cố định (ảnh con rồng)
-local openBtn = Instance.new("ImageButton")
-openBtn.Size = UDim2.new(0,48,0,48)
-openBtn.Position = UDim2.new(0, 32, 0, 18)
-openBtn.BackgroundTransparency = 1
-openBtn.Image = "rbxassetid://13762382490"
-openBtn.Parent = gui
-openBtn.Visible = false
-Instance.new("UICorner", openBtn).CornerRadius = UDim.new(1,0)
-
 closeBtn.MouseButton1Click:Connect(function()
     frame.Visible = false
     State.menuVisible = false
     openBtn.Visible = true
 end)
 
-openBtn.MouseButton1Click:Connect(function()
-    frame.Visible = true
-    State.menuVisible = true
-    openBtn.Visible = false
-end)
+--------------------------
+-- ESP CODE (auto update, features toggled by menu)
+--------------------------
+local function formatNum(n)
+    n = math.floor(n or 0)
+    if n >= 1000 then
+        return string.format("%.1fk", n/1000)
+    end
+    return tostring(n)
+end
 
---------------------------
--- ESP BUILDERS
---------------------------
+local function getTeamKey(p)
+    if p.Team ~= nil then
+        return "T:" .. (p.Team.Name or "Unknown")
+    elseif p.TeamColor ~= nil then
+        return "C:" .. tostring(p.TeamColor)
+    else
+        return "N:" .. p.Name
+    end
+end
+
+local function getTeamColor(p)
+    local key = getTeamKey(p)
+    if not TeamIndexMap[key] then
+        local count = 0
+        for _ in pairs(TeamIndexMap) do count += 1 end
+        local idx = (count % 5) + 1
+        TeamIndexMap[key] = idx
+    end
+    return TEAM_COLORS[TeamIndexMap[key]] or TEAM_COLORS[1]
+end
+
+local function worldToScreen(v3)
+    local v, onScreen = Camera:WorldToViewportPoint(v3)
+    return Vector2.new(v.X, v.Y), onScreen, v.Z
+end
+
 local function makeBillboard(character, player)
     local head = character:FindFirstChild("Head")
     if not head then return end
@@ -285,9 +284,6 @@ local function makeTracer(character, player)
     return line
 end
 
---------------------------
--- APPLY / REMOVE HELPERS
---------------------------
 local function updateNameplateText(tl, player, humanoid, character)
     if not tl or not tl.Parent then return end
     local hp = (humanoid and humanoid.Health) or 0
@@ -386,9 +382,6 @@ local function removeESPForPlayer(p)
     ESPMap[p] = nil
 end
 
---------------------------
--- GLOBAL APPLY
---------------------------
 local function applyEspVisibility()
     for _,container in pairs(ESPMap) do
         if container.gui then container.gui.Enabled = State.espEnabled end
@@ -406,34 +399,30 @@ local function applyHeadHitboxAll()
     end
 end
 
---------------------------
--- TRACER UPDATE LOOP
---------------------------
 RunService.RenderStepped:Connect(function()
     if not State.espEnabled or not State.tracerEnabled or not HasDrawing then
         for _,ct in pairs(ESPMap) do
             if ct.tracer then ct.tracer.Visible = false end
         end
-        return
-    end
-
-    local screenBottom = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y - 2)
-    for _,ct in pairs(ESPMap) do
-        local char = ct.character
-        local tracer = ct.tracer
-        if tracer and char and char.Parent then
-            local head = char:FindFirstChild("Head")
-            if head then
-                local pos2D, onScreen = worldToScreen(head.Position)
-                if onScreen then
-                    tracer.From = screenBottom
-                    tracer.To = pos2D
-                    tracer.Visible = true
+    else
+        local screenBottom = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y - 2)
+        for _,ct in pairs(ESPMap) do
+            local char = ct.character
+            local tracer = ct.tracer
+            if tracer and char and char.Parent then
+                local head = char:FindFirstChild("Head")
+                if head then
+                    local pos2D, onScreen = worldToScreen(head.Position)
+                    if onScreen then
+                        tracer.From = screenBottom
+                        tracer.To = pos2D
+                        tracer.Visible = true
+                    else
+                        tracer.Visible = false
+                    end
                 else
                     tracer.Visible = false
                 end
-            else
-                tracer.Visible = false
             end
         end
     end
@@ -446,9 +435,6 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
---------------------------
--- PLAYERS HOOK
---------------------------
 for _,p in ipairs(Players:GetPlayers()) do
     if p ~= LocalPlayer then
         createESPForPlayer(p)
@@ -463,17 +449,6 @@ end)
 
 Players.PlayerRemoving:Connect(function(p)
     removeESPForPlayer(p)
-end)
-
---------------------------
--- FEEDBACK
---------------------------
-pcall(function()
-    StarterGui:SetCore("SendNotification", {
-        Title = "Universal ESP",
-        Text = HasDrawing and "Drawing API: YES (tracers enabled)" or "Drawing API: NO (tracers disabled)",
-        Duration = 6
-    })
 end)
 
 task.spawn(function()
