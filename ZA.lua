@@ -1,13 +1,12 @@
 --[[
-  Universal ESP + Team + Health + Tracers + Hitbox (5 teams)
+  Universal ESP + Team + Health + Tracers + Head Hitbox (5 teams)
   By Conghau — 2025-08-16
 
   Features:
-    - ESP với 5 team, hiện máu, hiện team
+    - ESP với 5 team, hiện máu, hiện team, khoảng cách
     - Tracer (Drawing API)
-    - Hitbox bật/tắt, chỉnh kích thước HRP bằng slider
-    - Menu có nút đóng/mở
-    - Tự động cập nhật khi người chơi join/leave, chết/hồi sinh
+    - Hitbox đầu chỉnh được từ 5 đến 20 (slider)
+    - Menu đóng/mở, tự động cập nhật khi người chơi join/leave, chết/hồi sinh
 ]]
 
 --------------------------
@@ -20,8 +19,6 @@ local TEAM_COLORS = {
     Color3.fromRGB(255, 210, 70),  -- Team 4 (Yellow)
     Color3.fromRGB(200, 120, 255), -- Team 5 (Purple)
 }
-local HITBOX_SIZE = Vector3.new(6, 6, 6)
-local DEFAULT_HITBOX_SIZE = 6 -- mặc định 6
 local SHOW_DISTANCE = true
 
 --------------------------
@@ -40,7 +37,7 @@ local State = {
     espEnabled = false,
     tracerEnabled = false,
     hitboxEnabled = false,
-    hitboxSize = DEFAULT_HITBOX_SIZE,
+    headHitboxSize = 5,     -- Mặc định 5, min 5 max 20
     menuVisible = true
 }
 
@@ -49,7 +46,6 @@ local HasDrawing = pcall(function()
 end)
 
 local ESPMap = {}
-
 local TeamIndexMap = {}
 
 --------------------------
@@ -94,7 +90,7 @@ local function worldToScreen(v3)
 end
 
 --------------------------
--- UI (draggable menu, close/open, slider hitbox)
+-- UI (draggable menu, close/open, slider head hitbox)
 --------------------------
 local function createUI()
     local gui = Instance.new("ScreenGui")
@@ -155,43 +151,43 @@ local function createUI()
     makeToggle(75, "Tracer", function() return State.tracerEnabled end, function(v) State.tracerEnabled = v end)
     makeToggle(110,"Hitbox", function() return State.hitboxEnabled end, function(v) State.hitboxEnabled = v end)
 
-    -- Slider Hitbox
-    local sliderLabel = Instance.new("TextLabel")
-    sliderLabel.Size = UDim2.new(1, -20, 0, 18)
-    sliderLabel.Position = UDim2.fromOffset(12, 145)
-    sliderLabel.BackgroundTransparency = 1
-    sliderLabel.Text = "Hitbox Size: " .. State.hitboxSize
-    sliderLabel.Font = Enum.Font.Gotham
-    sliderLabel.TextSize = 14
-    sliderLabel.TextColor3 = Color3.fromRGB(200,200,200)
-    sliderLabel.TextXAlignment = Enum.TextXAlignment.Left
-    sliderLabel.Parent = frame
+    -- Slider Head Hitbox
+    local headSliderLabel = Instance.new("TextLabel")
+    headSliderLabel.Size = UDim2.new(1, -20, 0, 18)
+    headSliderLabel.Position = UDim2.fromOffset(12, 145)
+    headSliderLabel.BackgroundTransparency = 1
+    headSliderLabel.Text = "Head Hitbox Size: " .. State.headHitboxSize
+    headSliderLabel.Font = Enum.Font.Gotham
+    headSliderLabel.TextSize = 14
+    headSliderLabel.TextColor3 = Color3.fromRGB(200,200,200)
+    headSliderLabel.TextXAlignment = Enum.TextXAlignment.Left
+    headSliderLabel.Parent = frame
 
-    local sliderFrame = Instance.new("Frame")
-    sliderFrame.Size = UDim2.new(1, -40, 0, 8)
-    sliderFrame.Position = UDim2.fromOffset(20, 168)
-    sliderFrame.BackgroundColor3 = Color3.fromRGB(55,55,55)
-    sliderFrame.Parent = frame
-    Instance.new("UICorner", sliderFrame).CornerRadius = UDim.new(1,0)
+    local headSliderFrame = Instance.new("Frame")
+    headSliderFrame.Size = UDim2.new(1, -40, 0, 8)
+    headSliderFrame.Position = UDim2.fromOffset(20, 168)
+    headSliderFrame.BackgroundColor3 = Color3.fromRGB(55,55,55)
+    headSliderFrame.Parent = frame
+    Instance.new("UICorner", headSliderFrame).CornerRadius = UDim.new(1,0)
 
-    local knob = Instance.new("Frame")
-    knob.Size = UDim2.fromOffset(14, 18)
-    knob.Position = UDim2.new((State.hitboxSize-4)/16,0,0,-5) -- min=4, max=20
-    knob.BackgroundColor3 = Color3.fromRGB(110,55,55)
-    knob.Parent = sliderFrame
-    Instance.new("UICorner", knob).CornerRadius = UDim.new(1,0)
+    local headKnob = Instance.new("Frame")
+    headKnob.Size = UDim2.fromOffset(14, 18)
+    headKnob.Position = UDim2.new((State.headHitboxSize-5)/15,0,0,-5) -- min=5, max=20
+    headKnob.BackgroundColor3 = Color3.fromRGB(110,55,55)
+    headKnob.Parent = headSliderFrame
+    Instance.new("UICorner", headKnob).CornerRadius = UDim.new(1,0)
 
-    knob.InputBegan:Connect(function(input)
+    headKnob.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
             local UIS = game:GetService("UserInputService")
             local move
             move = UIS.InputChanged:Connect(function(input2)
                 if input2.UserInputType == Enum.UserInputType.MouseMovement then
-                    local x = math.clamp(input2.Position.X - sliderFrame.AbsolutePosition.X, 0, sliderFrame.AbsoluteSize.X)
-                    local size = math.floor(4 + (x/sliderFrame.AbsoluteSize.X)*16) -- min=4, max=20
-                    State.hitboxSize = size
-                    knob.Position = UDim2.new((size-4)/16,0,0,-5)
-                    sliderLabel.Text = "Hitbox Size: " .. size
+                    local x = math.clamp(input2.Position.X - headSliderFrame.AbsolutePosition.X, 0, headSliderFrame.AbsoluteSize.X)
+                    local size = math.floor(5 + (x/headSliderFrame.AbsoluteSize.X)*15) -- min=5, max=20
+                    State.headHitboxSize = size
+                    headKnob.Position = UDim2.new((size-5)/15,0,0,-5)
+                    headSliderLabel.Text = "Head Hitbox Size: " .. size
                 end
             end)
             local function endDrag()
@@ -242,7 +238,6 @@ local function createUI()
         openBtn.Visible = false
     end)
 
-    -- Ẩn/hiện menu theo state
     game:GetService("RunService").RenderStepped:Connect(function()
         if frame.Visible ~= State.menuVisible then
             frame.Visible = State.menuVisible
@@ -335,26 +330,20 @@ local function updateNameplateText(tl, player, humanoid, character)
     tl.Text = string.format("%s | HP: %s/%s (%.0f%%%s)", player.Name, formatNum(hp), formatNum(maxHp), percent, dist)
 end
 
-local function applyHitbox(character, enable, store)
-    local hrp = character:FindFirstChild("HumanoidRootPart")
-    if not hrp then return end
+local function applyHeadHitbox(character, enable, store)
+    local head = character:FindFirstChild("Head")
+    if not head then return end
     if enable then
         if store then
-            store.hrpSize = hrp.Size
-            store.hrpCollide = hrp.CanCollide
-            store.hrpMassless = hrp.Massless
+            store.headSize = head.Size
         end
         pcall(function()
-            hrp.Size = Vector3.new(State.hitboxSize, State.hitboxSize, State.hitboxSize)
-            hrp.Massless = true
-            hrp.CanCollide = false
+            head.Size = Vector3.new(State.headHitboxSize, State.headHitboxSize, State.headHitboxSize)
         end)
     else
-        if store and store.hrpSize then
+        if store and store.headSize then
             pcall(function()
-                hrp.Size = store.hrpSize
-                hrp.CanCollide = store.hrpCollide
-                hrp.Massless = store.hrpMassless
+                head.Size = store.headSize
             end)
         end
     end
@@ -390,7 +379,7 @@ local function createESPForPlayer(p)
         if container.box then container.box.Visible = visible end
         if container.tracer then container.tracer.Visible = (visible and State.tracerEnabled) end
 
-        applyHitbox(char, State.hitboxEnabled, container.originals)
+        applyHeadHitbox(char, State.hitboxEnabled, container.originals)
     end
 
     if p.Character then
@@ -408,7 +397,7 @@ local function removeESPForPlayer(p)
     if not container then return end
 
     if container.character then
-        applyHitbox(container.character, false, container.originals)
+        applyHeadHitbox(container.character, false, container.originals)
     end
 
     for _,c in ipairs(container.conns) do safeDisconnect(c) end
@@ -433,10 +422,10 @@ local function applyEspVisibility()
     end
 end
 
-local function applyHitboxAll()
+local function applyHeadHitboxAll()
     for _,container in pairs(ESPMap) do
         if container.character then
-            applyHitbox(container.character, State.hitboxEnabled, container.originals)
+            applyHeadHitbox(container.character, State.hitboxEnabled, container.originals)
         end
     end
 end
@@ -507,17 +496,17 @@ pcall(function()
 end)
 
 task.spawn(function()
-    local last = {esp=false, tracer=false, hit=false, size=DEFAULT_HITBOX_SIZE}
+    local last = {esp=false, tracer=false, hit=false, size=5}
     while true do
         if State.espEnabled ~= last.esp or State.tracerEnabled ~= last.tracer then
             applyEspVisibility()
             last.esp = State.espEnabled
             last.tracer = State.tracerEnabled
         end
-        if State.hitboxEnabled ~= last.hit or State.hitboxSize ~= last.size then
-            applyHitboxAll()
+        if State.hitboxEnabled ~= last.hit or State.headHitboxSize ~= last.size then
+            applyHeadHitboxAll()
             last.hit = State.hitboxEnabled
-            last.size = State.hitboxSize
+            last.size = State.headHitboxSize
         end
         task.wait(0.25)
     end
