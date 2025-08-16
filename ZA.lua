@@ -1,12 +1,7 @@
 --[[
   Universal ESP + Team + Health + Tracers + Head Hitbox (5 teams)
+  Menu cố định bên trái, nút hình tròn cố định, slider hitbox dễ kéo
   By Conghau — 2025-08-16
-
-  Features:
-    - ESP với 5 team, hiện máu, hiện team, khoảng cách
-    - Tracer (Drawing API)
-    - Hitbox đầu chỉnh được từ 5 đến 20 (slider)
-    - Menu đóng/mở, tự động cập nhật khi người chơi join/leave, chết/hồi sinh
 ]]
 
 --------------------------
@@ -90,7 +85,7 @@ local function worldToScreen(v3)
 end
 
 --------------------------
--- UI (draggable menu, close/open, slider head hitbox)
+-- UI (cố định bên trái, slider hitbox dễ kéo)
 --------------------------
 local function createUI()
     local gui = Instance.new("ScreenGui")
@@ -100,12 +95,11 @@ local function createUI()
     gui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
     local frame = Instance.new("Frame")
-    frame.Size = UDim2.fromOffset(240, 185)
-    frame.Position = UDim2.new(0, 20, 0.5, -90)
+    frame.Size = UDim2.fromOffset(240, 200)
+    frame.Position = UDim2.new(0, 32, 0, 80) -- Luôn bên trái
     frame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
     frame.BorderSizePixel = 0
     frame.Active = true
-    frame.Draggable = true
     frame.Parent = gui
     Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 10)
 
@@ -151,7 +145,7 @@ local function createUI()
     makeToggle(75, "Tracer", function() return State.tracerEnabled end, function(v) State.tracerEnabled = v end)
     makeToggle(110,"Hitbox", function() return State.hitboxEnabled end, function(v) State.hitboxEnabled = v end)
 
-    -- Slider Head Hitbox
+    -- Slider Head Hitbox (bên trái lớn, dễ kéo)
     local headSliderLabel = Instance.new("TextLabel")
     headSliderLabel.Size = UDim2.new(1, -20, 0, 18)
     headSliderLabel.Position = UDim2.fromOffset(12, 145)
@@ -164,15 +158,15 @@ local function createUI()
     headSliderLabel.Parent = frame
 
     local headSliderFrame = Instance.new("Frame")
-    headSliderFrame.Size = UDim2.new(1, -40, 0, 8)
+    headSliderFrame.Size = UDim2.new(1, -40, 0, 20) -- cao hơn, dễ kéo
     headSliderFrame.Position = UDim2.fromOffset(20, 168)
     headSliderFrame.BackgroundColor3 = Color3.fromRGB(55,55,55)
     headSliderFrame.Parent = frame
     Instance.new("UICorner", headSliderFrame).CornerRadius = UDim.new(1,0)
 
     local headKnob = Instance.new("Frame")
-    headKnob.Size = UDim2.fromOffset(14, 18)
-    headKnob.Position = UDim2.new((State.headHitboxSize-5)/15,0,0,-5) -- min=5, max=20
+    headKnob.Size = UDim2.fromOffset(18, 28) -- lớn, dễ kéo
+    headKnob.Position = UDim2.new((State.headHitboxSize-5)/15,0,0,-4)
     headKnob.BackgroundColor3 = Color3.fromRGB(110,55,55)
     headKnob.Parent = headSliderFrame
     Instance.new("UICorner", headKnob).CornerRadius = UDim.new(1,0)
@@ -186,7 +180,7 @@ local function createUI()
                     local x = math.clamp(input2.Position.X - headSliderFrame.AbsolutePosition.X, 0, headSliderFrame.AbsoluteSize.X)
                     local size = math.floor(5 + (x/headSliderFrame.AbsoluteSize.X)*15) -- min=5, max=20
                     State.headHitboxSize = size
-                    headKnob.Position = UDim2.new((size-5)/15,0,0,-5)
+                    headKnob.Position = UDim2.new((size-5)/15,0,0,-4)
                     headSliderLabel.Text = "Head Hitbox Size: " .. size
                 end
             end)
@@ -199,7 +193,7 @@ local function createUI()
 
     local note = Instance.new("TextLabel")
     note.Size = UDim2.new(1, -10, 0, 18)
-    note.Position = UDim2.fromOffset(10, 185)
+    note.Position = UDim2.fromOffset(10, 195)
     note.BackgroundTransparency = 1
     note.Text = HasDrawing and "Drawing API: YES (tracers enabled)" or "Drawing API: NO (tracers disabled)"
     note.Font = Enum.Font.Gotham
@@ -208,7 +202,7 @@ local function createUI()
     note.TextXAlignment = Enum.TextXAlignment.Left
     note.Parent = frame
 
-    -- Nút đóng menu
+    -- Nút đóng menu (cố định)
     local closeBtn = Instance.new("TextButton")
     closeBtn.Size = UDim2.new(0,32,0,32)
     closeBtn.Position = UDim2.new(1,-42,0,8)
@@ -224,14 +218,15 @@ local function createUI()
         State.menuVisible = false
     end)
 
-    -- Nút mở lại menu
+    -- Nút mở lại menu hình tròn bên trái cố định
     local openBtn = Instance.new("ImageButton")
-    openBtn.Size = UDim2.new(0,40,0,40)
-    openBtn.Position = UDim2.new(0, 20, 0.5, -20)
+    openBtn.Size = UDim2.new(0,48,0,48)
+    openBtn.Position = UDim2.new(0, 32, 0, 18)
     openBtn.BackgroundTransparency = 1
     openBtn.Image = "rbxassetid://13762382490" -- ảnh con rồng, có thể thay ID khác
     openBtn.Parent = gui
     openBtn.Visible = false
+    Instance.new("UICorner", openBtn).CornerRadius = UDim.new(1,0)
     openBtn.MouseButton1Click:Connect(function()
         frame.Visible = true
         State.menuVisible = true
