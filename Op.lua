@@ -1,19 +1,24 @@
-local Teams = {"Red", "Blue", "Green", "Yellow", "Purple"} -- Chỉnh theo tên team game của bạn nếu khác
-local DRAGON_IMG = "rbxassetid://13762382490" -- ID ảnh con rồng, có thể thay bằng ảnh khác
+-- Universal ESP + Hitbox Menu, Team/HP/Distance, Auto Update
+local Teams = {"Red", "Blue", "Green", "Yellow", "Purple"} -- Thay bằng tên team của game nếu cần
 
--- Main GUI
 local gui=Instance.new("ScreenGui",game.CoreGui)
 gui.Name = "UniversalESPMenu"
 
--- Menu Frame
 local frame=Instance.new("Frame",gui)
-frame.Size=UDim2.new(0,240,0,360)
+frame.Size=UDim2.new(0,250,0,370)
 frame.Position=UDim2.new(1,-260,0,100)
 frame.BackgroundColor3=Color3.new(.1,.1,.15)
 frame.Visible=false
 frame.BorderSizePixel=2
 
--- Close Button
+local openBtn=Instance.new("TextButton",gui)
+openBtn.Size=UDim2.new(0,80,0,40)
+openBtn.Position=UDim2.new(1,-90,0,40)
+openBtn.Text="ESP Menu"
+openBtn.BackgroundColor3=Color3.new(.2,0,0)
+openBtn.TextColor3=Color3.new(1,1,1)
+openBtn.TextScaled=true
+
 local closeBtn=Instance.new("TextButton",frame)
 closeBtn.Size=UDim2.new(0,40,0,40)
 closeBtn.Position=UDim2.new(1,-40,0,0)
@@ -22,35 +27,10 @@ closeBtn.BackgroundColor3=Color3.new(.3,.1,.1)
 closeBtn.TextColor3=Color3.new(1,1,1)
 closeBtn.TextScaled=true
 
--- Dragon round menu button
-local dragonBtn=Instance.new("ImageButton",gui)
-dragonBtn.Size=UDim2.new(0,60,0,60)
-dragonBtn.Position=UDim2.new(1,-90,0,40)
-dragonBtn.BackgroundTransparency=1
-dragonBtn.Image=DRAGON_IMG
-dragonBtn.Name="DragonMenuBtn"
-dragonBtn.AutoButtonColor = true
-dragonBtn.ImageColor3 = Color3.new(1,1,1)
-local circle=Instance.new("UICorner",dragonBtn)
-circle.CornerRadius=UDim.new(1,0)
-
--- Ẩn/hiện nút menu
-dragonBtn.Visible=true
-frame.Visible=false
-
-dragonBtn.MouseButton1Click:Connect(function()
-    frame.Visible=true
-    dragonBtn.Visible=false
-end)
-closeBtn.MouseButton1Click:Connect(function()
-    frame.Visible=false
-    dragonBtn.Visible=true
-end)
-
 -- Toggle buttons
-local toggles={ESP=false,Line=false,ShowHP=true,ShowTeam=true,Hitbox=false}
+local toggles={ESP=false,Line=false,ShowHP=true,ShowTeam=true,ShowDist=false,Hitbox=false}
 local togBtns={}
-local opts = {"ESP","Line","ShowHP","ShowTeam","Hitbox"}
+local opts = {"ESP","Line","ShowHP","ShowTeam","ShowDist","Hitbox"}
 for i,info in ipairs(opts) do
     local b=Instance.new("TextButton",frame)
     b.Size=UDim2.new(0,190,0,34)
@@ -66,6 +46,15 @@ for i,info in ipairs(opts) do
         updateAll()
     end)
 end
+
+openBtn.MouseButton1Click:Connect(function()
+    frame.Visible=true
+    openBtn.Visible=false
+end)
+closeBtn.MouseButton1Click:Connect(function()
+    frame.Visible=false
+    openBtn.Visible=true
+end)
 
 -- ESP Functions
 local function clearESP(pchar)
@@ -98,7 +87,7 @@ local function drawESP(plr)
     -- Team
     local teamname = plr.Team and plr.Team.Name or "NoTeam"
     local tcolor = getTeamColor(teamname)
-    -- ESP Name/HP/Team
+    -- ESP Name/HP/Team/Distance
     if head then
         local esp=Instance.new("BillboardGui",head)
         esp.Name="ESPName"
@@ -116,6 +105,13 @@ local function drawESP(plr)
         end
         if toggles.ShowHP and humanoid then
             tl.Text = tl.Text .. " | HP: "..math.floor(humanoid.Health)
+        end
+        if toggles.ShowDist and root then
+            local localRoot = game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+            if localRoot then
+                local dist = (localRoot.Position - root.Position).Magnitude
+                tl.Text = tl.Text .. string.format(" | %.1fm", dist)
+            end
         end
     end
     -- Line ESP
@@ -156,9 +152,9 @@ for _,plr in ipairs(game.Players:GetPlayers()) do
     if plr.Character then drawESP(plr) end
 end
 
--- Auto update HP/Team
+-- Auto update HP/Team/Distance
 game:GetService("RunService").RenderStepped:Connect(function()
     updateAll()
 end)
 
-print("Universal ESP/Hitbox menu loaded with dragon icon!")
+print("Universal ESP/Hitbox menu loaded!")
