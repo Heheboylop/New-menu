@@ -1,6 +1,7 @@
 --[[
   Universal ESP + Team + Health + Tracers + Head Hitbox (5 teams)
   Menu cố định bên trái, nút hình tròn cố định, slider hitbox dễ kéo
+  Bật menu tăng âm lượng, tắt menu giảm âm lượng
   By Conghau — 2025-08-16
 ]]
 
@@ -84,8 +85,17 @@ local function worldToScreen(v3)
     return Vector2.new(v.X, v.Y), onScreen, v.Z
 end
 
+-- Âm lượng workspace
+local function setVolume(vol)
+    for _,s in ipairs(workspace:GetDescendants()) do
+        if s:IsA("Sound") then
+            s.Volume = vol
+        end
+    end
+end
+
 --------------------------
--- UI (cố định bên trái, slider hitbox dễ kéo)
+-- UI (cố định bên trái, slider hitbox dễ kéo, nút tròn cố định)
 --------------------------
 local function createUI()
     local gui = Instance.new("ScreenGui")
@@ -216,6 +226,7 @@ local function createUI()
     closeBtn.MouseButton1Click:Connect(function()
         frame.Visible = false
         State.menuVisible = false
+        setVolume(0.1) -- Giảm âm lượng khi tắt menu
     end)
 
     -- Nút mở lại menu hình tròn bên trái cố định
@@ -231,6 +242,7 @@ local function createUI()
         frame.Visible = true
         State.menuVisible = true
         openBtn.Visible = false
+        setVolume(1) -- Tăng âm lượng khi bật menu
     end)
 
     game:GetService("RunService").RenderStepped:Connect(function()
